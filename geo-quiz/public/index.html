@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#f4f0e8" />
+    <title>Atlas — Quiz géographique</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Figtree:wght@700;800&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <header class="topbar">
+        <a class="brand" href="#" aria-label="Atlas, accueil">
+          <span class="brand-mark" aria-hidden="true"><i data-lucide="navigation-2"></i></span>
+          <span>ATLAS</span>
+        </a>
+        <div class="score-strip" aria-label="Progression de la partie">
+          <div><span>Score</span><strong id="score">0</strong></div>
+          <div><span>Série</span><strong id="streak">0</strong></div>
+          <div><span>Manche</span><strong><span id="round">1</span>/<span id="round-total">10</span></strong></div>
+        </div>
+        <button class="icon-button" id="reset-button" type="button" title="Nouvelle partie" aria-label="Nouvelle partie">
+          <i data-lucide="rotate-ccw"></i>
+        </button>
+      </header>
+
+      <nav class="mode-bar" aria-label="Sélection du mode de jeu">
+        <span class="mode-bar-label">Mode de jeu</span>
+        <details class="mode-menu" id="mode-menu">
+          <summary><i data-lucide="layout-grid"></i><strong id="current-mode-label">Pays</strong><i data-lucide="chevron-down"></i></summary>
+          <div class="mode-switch" role="tablist" aria-label="Mode de jeu">
+            <button class="mode-button active" data-mode="country" type="button" role="tab" aria-selected="true">
+              <i data-lucide="map-pin"></i><span>Pays</span><small>Localiser un pays</small>
+            </button>
+            <button class="mode-button" data-mode="flag" type="button" role="tab" aria-selected="false">
+              <i data-lucide="flag"></i><span>Drapeau</span><small>Reconnaître son drapeau</small>
+            </button>
+            <button class="mode-button" data-mode="capital" type="button" role="tab" aria-selected="false">
+              <i data-lucide="landmark"></i><span>Capitale</span><small>Retrouver son pays</small>
+            </button>
+            <button class="mode-button" data-mode="route" type="button" role="tab" aria-selected="false">
+              <i data-lucide="route"></i><span>Frontières</span><small>Tracer un chemin adjacent</small>
+            </button>
+            <button class="mode-button" data-mode="links" type="button" role="tab" aria-selected="false">
+              <i data-lucide="link-2"></i><span>Liens</span><small>Réunir des pays liés</small>
+            </button>
+            <button class="mode-button" data-mode="learning" type="button" role="tab" aria-selected="false">
+              <i data-lucide="book-open"></i><span>Apprendre</span><small>Explorer par région</small>
+            </button>
+          </div>
+        </details>
+      </nav>
+
+      <section class="game-layout">
+        <section class="learning-hub hidden" id="learning-hub" aria-label="Révision géographique">
+          <section class="learning-home" id="learning-home">
+            <div class="learning-home-inner">
+              <p class="eyebrow">MODE APPRENTISSAGE</p>
+              <h1>Que veux-tu réviser ?</h1>
+              <p>Choisis une catégorie, puis situe chaque réponse directement sur la carte.</p>
+              <label class="learning-region-choice">Région
+                <select id="learning-region" aria-label="Choisir une région">
+                  <option value="all">Monde entier</option>
+                  <option value="Africa">Afrique</option>
+                  <option value="Americas">Amériques</option>
+                  <option value="Asia">Asie</option>
+                  <option value="Europe">Europe</option>
+                  <option value="Oceania">Océanie</option>
+                </select>
+              </label>
+              <div class="learning-start-grid">
+                <button data-start-learning="countries" type="button"><i data-lucide="map-pin"></i><strong>Pays</strong><span>Retrouve le pays demandé</span></button>
+                <button data-start-learning="capitals" type="button"><i data-lucide="landmark"></i><strong>Capitales</strong><span>De Paris jusqu’à la France</span></button>
+                <button data-start-learning="flags" type="button"><i data-lucide="flag"></i><strong>Drapeaux</strong><span>Reconnais puis situe le pays</span></button>
+                <button data-start-learning="landmarks" type="button"><i data-lucide="mountain-snow"></i><strong>Landmarks</strong><span>Fleuves, forêts et montagnes</span></button>
+              </div>
+            </div>
+          </section>
+
+          <section class="learning-map-session hidden" id="learning-map-session">
+            <header class="learning-session-hud">
+              <button id="close-learning-session" type="button" title="Quitter la session" aria-label="Quitter la session"><i data-lucide="x"></i></button>
+              <div><small>Progression</small><strong><span id="learning-session-round">1</span>/10</strong></div>
+              <div><small>Bonnes réponses</small><strong id="learning-session-score">0</strong></div>
+              <div><small>Vies</small><span class="learning-lives" id="learning-session-lives"><i></i><i></i><i></i></span></div>
+            </header>
+            <div class="learning-session-feedback hidden" id="learning-session-feedback" role="status"></div>
+            <div class="learning-session-prompt" id="learning-session-prompt">
+              <img class="hidden" id="learning-session-flag" alt="Drapeau à identifier" />
+              <small id="learning-session-kind">PAYS</small>
+              <strong id="learning-session-question">Trouve ce pays sur la carte</strong>
+            </div>
+          </section>
+
+          <section class="learning-session-result hidden" id="learning-session-result">
+            <div>
+              <i data-lucide="graduation-cap"></i>
+              <p class="eyebrow">SESSION TERMINÉE</p>
+              <h2><span id="learning-result-score">0</span>/10</h2>
+              <p id="learning-result-message"></p>
+              <button id="replay-learning-session" type="button"><i data-lucide="rotate-ccw"></i> Recommencer</button>
+              <button id="back-learning-home" type="button">Changer de catégorie</button>
+            </div>
+          </section>
+        </section>
+
+        <aside class="game-panel">
+          <div class="question-area" id="question-area">
+            <p class="eyebrow" id="prompt-label">TROUVE CE PAYS</p>
+            <div class="flag-frame hidden" id="flag-frame">
+              <img id="flag-image" alt="" />
+            </div>
+            <h1 id="question">Chargement de la carte…</h1>
+            <div class="learning-controls hidden" id="learning-controls">
+              <label for="region-select">Région</label>
+              <select id="region-select">
+                <option value="all">Monde entier</option>
+                <option value="Africa">Afrique</option>
+                <option value="Americas">Amériques</option>
+                <option value="Asia">Asie</option>
+                <option value="Europe">Europe</option>
+                <option value="Oceania">Océanie</option>
+              </select>
+              <div class="learning-nav">
+                <button id="learning-previous" type="button" title="Pays précédent" aria-label="Pays précédent"><i data-lucide="chevron-left"></i></button>
+                <button id="learning-next" type="button" title="Pays suivant" aria-label="Pays suivant"><i data-lucide="chevron-right"></i></button>
+              </div>
+            </div>
+          </div>
+
+          <div class="attempts" id="attempts-row" aria-label="Tentatives restantes">
+            <div class="objective-count"><strong><span id="found-count">0</span>/<span id="goal-count">1</span></strong><small>Trouvés</small></div>
+            <div class="lives"><small>Vies</small><div id="attempt-dots"><i></i><i></i><i></i></div></div>
+          </div>
+
+          <div class="feedback hidden" id="feedback" role="status" aria-live="polite">
+            <span class="feedback-icon"><i data-lucide="mouse-pointer-2"></i></span>
+            <p><strong>À toi de jouer</strong><span>Clique sur le pays dans la carte.</span></p>
+          </div>
+
+          <button class="hint-button" id="hint-button" type="button" disabled>
+            <i data-lucide="lightbulb"></i><span>Un indice</span><small>-100 pts</small>
+          </button>
+
+          <p class="question-detail" id="question-detail">Les frontières et les pays arrivent.</p>
+        </aside>
+
+        <section class="map-stage" aria-label="Carte du monde interactive">
+          <div id="map"></div>
+          <div class="map-status" id="map-status"><span class="spinner"></span>Préparation du monde</div>
+          <div class="result-burst" id="result-burst" aria-hidden="true"></div>
+        </section>
+      </section>
+    </main>
+
+    <div class="modal-backdrop hidden" id="end-modal">
+      <section class="end-modal" role="dialog" aria-modal="true" aria-labelledby="end-title">
+        <div class="trophy"><i data-lucide="trophy"></i></div>
+        <p class="eyebrow">PARTIE TERMINÉE</p>
+        <h2 id="end-title">Tour du monde bouclé</h2>
+        <p id="end-message"></p>
+        <div class="final-score"><span>Score final</span><strong id="final-score">0</strong></div>
+        <button id="play-again" type="button"><i data-lucide="play"></i> Rejouer</button>
+      </section>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/lucide@0.468.0/dist/umd/lucide.min.js"></script>
+    <script src="./app.js"></script>
+  </body>
+</html>
